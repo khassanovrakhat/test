@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Arr;
 use App\Models\Question;
 use Illuminate\Http\Request;
 use App\Models\Answer;
@@ -60,6 +61,10 @@ class StudentController extends Controller
     }
     public function getTestQuestion(Request $request){
         try{
+            if(empty($request->token)){
+                return response()->json(array('message' => 'not registered', 'code' => 2));
+            }
+            $body = JWT::decode($request->token, env('JWT_SECRET'), ['HS256']);
             $questions = Question::where('test_id', $request->test_id)->get();
             $answers = Answer::where('test_id', $request->test_id)->get()->toArray();
             // print_r($answers);
@@ -71,10 +76,12 @@ class StudentController extends Controller
                 $result[$i]['type'] = $questions[$i]['type'];
                 for ($j = 0; $j < count($answers) ; $j++) {
                     if($questions[$i]['id'] == $answers[$j]['question_id']){
-                        $result[$i]['answers'][] = $answers[$j]['content'];
+                        $result[$i]['answers'][] = $answers[$j]['id'];
                     }
                 }
+                $result[$i]['answers'] = Arr::shuffle($result[$i]['answers']);
             }
+            
             return response()->json(array('result' => $result, 'code' => 0));
         }
         catch (\Exception $e){
@@ -91,7 +98,7 @@ class StudentController extends Controller
             $student_answer = $request->studentAnswer;
             // print_r($student_answer); exit();
             $questions = Question::where('test_id', $request->test_id)->get()->toArray();
-            $answers = Answer::where('test_id', $request->test_id)->whereNotNull('right_answer')->get()->toArray();
+            $answers = Answer::where('test_id', $request->test_id)->where('mark', '!=', 0)->get()->toArray();
             
             $result = array();
             $cntMark = 0;
@@ -103,19 +110,15 @@ class StudentController extends Controller
                 for ($j = 0; $j < count($answers); $j++) { 
                     if($questions[$i]['id'] == $answers[$j]['question_id']){
                         $result[$i]['mark'][] = $answers[$j]['mark'];
-                        $result[$i]['right_answer'][] = $answers[$j]['right_answer']; 
+                        $result[$i]['answer_id'][] = $answers[$j]['id'];
+                        // $result[$i]['right_answer'][] = $answers[$j]['right_answer']; //don't need
                         if($questions[$i]['id'] == $student_answer[$i]['question_id']){
-                            $result[$i]['student_answer'] = json_decode($student_answer[$i]['answer']);
-                           
-                            
+                            $result[$i]['student_answer'] = json_decode($student_answer[$i]['answer']); //need answer_id
                         }
                     }
-                    
                 }
-                
-                // $result[$i]['student_answer'] = json_decode($request->studentAnswer[$i]['answer']);
-                
             }
+            // print_r($result); exit();
             // foreach($result as $res){
             //     if($res['right_answer'] == $res['student_answer']){
             //         foreach($res['mark'] as $mark){
@@ -124,8 +127,7 @@ class StudentController extends Controller
             //     }
             // }
             for($i = 0; $i < count($result); $i++){
-                 
-                if($result[$i]['right_answer'] == $result[$i]['student_answer']){
+                if($result[$i]['answer_id'] == $result[$i]['student_answer']){
                     for($j = 0; $j < count($result[$i]['mark']); $j++){
                         // print_r($result[$i]['right_answer'][$j]);
                         $cntMark += $result[$i]['mark'][$j];   
@@ -133,20 +135,20 @@ class StudentController extends Controller
                 }
             }
 
-            $data = array([
-                'student_id' => $body->data->user_id,
-                'test_id' => $request->test_id,
-                'score' => $cntMark,
-                'result' => json_encode($result),
-                // 'begin_time' => $request->test_id,
-                // 'end_time' => $request->test_id
-            ]);
-            Results::Insert($data);
-            // print_r($body->data->user_id);
-            // print_r($result);
-            // print_r($cntMark);
-
-            return response()->json(array('result' => 'succeed', 'code' => 0));
+            // $data = array([
+            //     'student_id' => $body->data->user_id,
+            //     'test_id' => $request->test_id,
+            //     'score' => $cntMark,
+            //     'result' => json_encode($result),
+            //     // 'begin_time' => $request->test_id,
+            //     // 'end_time' => $request->test_id
+            // ]);
+            // Results::Insert($data);
+            // // print_r($body->data->user_id);
+            // // print_r($result);
+            // // print_r($cntMark);
+            
+            return response()->json(array('result' => $result,'count' => $cntMark, 'code' => 0));
             // exit();
 
             // foreach ($questions as $question) {

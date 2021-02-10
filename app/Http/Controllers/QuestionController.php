@@ -31,15 +31,15 @@ class QuestionController extends Controller
                    
             
             // if($request->type == 'single'){
-                $addQuestions->content = $request->content;
-                $addQuestions->test_id = $request->test_id ;
-                $addQuestions->type = $request->type;
-                if($countQuestions == null){
-                    $addQuestions->priority = 1;
-                }else{
-                    $countQuestions += 1;
-                    $addQuestions->priority = $countQuestions;
-                }
+            $addQuestions->content = $request->content;
+            $addQuestions->test_id = $request->test_id ;
+            $addQuestions->type = $request->type;
+            if($countQuestions == null){
+                $addQuestions->priority = 1;
+            }else{
+                $countQuestions += 1;
+                $addQuestions->priority = $countQuestions;
+            }
                 
                 
             // }
@@ -81,17 +81,11 @@ class QuestionController extends Controller
                 ]);
                 Answer::Insert($data);
             }
-            
-            
-
             return response()->json(array('result' => 'succeed', 'code' => 0));
-            
         }
         catch (Exception $e){
             return response()->json(array('message' => $e->getMessage(), 'code' => 1));
         }
-
-        
     }
     // public function update(Request $request){
     //     $question = Question::where('id', $request->only('id'))->first();
